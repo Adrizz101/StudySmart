@@ -16,39 +16,100 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install Aider Agent
-        run: pip install aider-chat
+      - name: Install Google GenAI SDK
+        run: pip install google-genai
 
-      - name: Run AI Agent on Codebase
+      - name: Run Direct Python AI Generator
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
-          git config --global user.name "StudySmart AI Bot"
-          git config --global user.email "ai-bot@users.noreply.github.com"
-          
-          cd project
-          
-          # Pass explicit target files to Aider so it creates them directly
-          aider --model gemini/gemini-2.5-flash --yes --auto-commits \
-            src/App.tsx \
-            src/views/StudioDeck.tsx \
-            src/views/Whiteboard.tsx \
-            src/views/ExamArena.tsx \
-            src/views/Privacy.tsx \
-            --message "${{ github.event.issue.title }}: ${{ github.event.issue.body }}. Create the files src/views/StudioDeck.tsx, src/views/Whiteboard.tsx, src/views/ExamArena.tsx, and src/views/Privacy.tsx with full React Tailwind code. Then import and add routes for all 4 in src/App.tsx."
+          python3 - <<'EOF'
+          import os
+          from google import genai
 
-      - name: Push Changes
+          api_key = os.environ.get("GEMINI_API_KEY")
+          title = os.environ.get("ISSUE_TITLE")
+          body = os.environ.get("ISSUE_BODY")
+
+          client = genai.Client(api_key=api_key)
+
+          prompt = f"""
+          You are a principal React engineer. Build the requested modules for the StudySmart app.
+          Issue Title: {title}
+          Issue Body: {body}
+
+          You must generate full TypeScript React Tailwind code for these 5 exact file paths:
+          1. project/src/views/StudioDeck.tsx
+          2. project/src/views/Whiteboard.tsx
+          3. project/src/views/ExamArena.tsx
+          4. project/src/views/Privacy.tsx
+          5. project/src/App.tsx
+
+          Format output EXACTLY like this for each file:
+          ---FILE: project/src/views/StudioDeck.tsx---
+          [code]
+          ---END---
+
+          ---FILE: project/src/views/Whiteboard.tsx---
+          [code]
+          ---END---
+
+          ---FILE: project/src/views/ExamArena.tsx---
+          [code]
+          ---END---
+
+          ---FILE: project/src/views/Privacy.tsx---
+          [code]
+          ---END---
+
+          ---FILE: project/src/App.tsx---
+          [code]
+          ---END---
+          """
+
+          print("Requesting code generation from Gemini...")
+          response = client.models.generate_content(
+              model="gemini-2.5-flash",
+              contents=prompt,
+          )
+          text = response.text
+
+          # Process and write each file
+          blocks = text.split("---FILE: ")
+          for block in blocks[1:]:
+              header, rest = block.split("\n", 1)
+              filepath = header.strip().replace("---", "")
+              code = rest.split("---END---")[0].strip()
+              
+              # Clean markdown formatting if present
+              if code.startswith("```tsx"):
+                  code = code[6:]
+              elif code.startswith("```typescript"):
+                  code = code[13:]
+              elif code.startswith("```"):
+                  code = code[3:]
+              if code.endswith("```"):
+                  code = code[:-3]
+              code = code.strip()
+
+              os.makedirs(os.path.dirname(filepath), exist_ok=True)
+              with open(filepath, "w", encoding="utf-8") as f:
+                  f.write(code)
+              print(f"Created/Updated: {filepath}")
+          EOF
+
+      - name: Commit and Push Changes
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m "feat: add StudySmart views and updated App routing [skip ci]" || echo "No changes to commit"
+          git add project/src/
+          git commit -m "feat: generate StudySmart views and update App routing" || echo "No changes to commit"
           git push origin main
