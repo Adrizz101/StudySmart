@@ -1,0 +1,38 @@
+name: Autonomous AI Developer
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  build-feature:
+    if: contains(github.event.issue.labels.*.name, 'ai-build') || github.event.action == 'opened'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Aider Agent
+        run: pip install aider-chat
+
+      - name: Run AI Agent on Codebase
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          git config --global user.name "StudySmart AI Bot"
+          git config --global user.email "ai-bot@studysmart.local"
+          aider --model gemini/gemini-2.0-flash --message "${{ github.event.issue.title }}: ${{ github.event.issue.body }}" --yes --auto-commits
+
+      - name: Push Changes to Repository
+        run: |
+          git push origin main
