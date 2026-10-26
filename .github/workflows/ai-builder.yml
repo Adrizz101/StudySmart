@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -30,13 +32,18 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           git config --global user.name "StudySmart AI Bot"
-          git config --global user.email "ai-bot@studysmart.local"
+          git config --global user.email "ai-bot@users.noreply.github.com"
           
-          # Navigate into project directory where src lives
+          # Navigate into project folder
           cd project
           
-          aider --model gemini/gemini-2.0-flash --architect --yes --auto-commits --message "${{ github.event.issue.title }}: ${{ github.event.issue.body }}. NOTE: The codebase is in project/src/. Put views in project/src/views/ and components in project/src/components/."
+          # Run Aider with updated Gemini Flash alias
+          aider --model gemini/gemini-2.5-flash --architect --yes --auto-commits --message "${{ github.event.issue.title }}: ${{ github.event.issue.body }}. NOTE: The codebase is in project/src/. Put views in project/src/views/ and components in project/src/components/."
 
-      - name: Push Changes to Repository
+      - name: Push Changes
         run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "feat: auto-generated StudySmart core modules [skip ci]" || echo "No changes to commit"
           git push origin main
