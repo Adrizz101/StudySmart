@@ -31,7 +31,11 @@ jobs:
         run: |
           git config --global user.name "StudySmart AI Bot"
           git config --global user.email "ai-bot@studysmart.local"
-          aider --model gemini/gemini-2.0-flash --message "${{ github.event.issue.title }}: ${{ github.event.issue.body }}" --yes --auto-commits
+          
+          # Navigate into project directory where src lives
+          cd project
+          
+          aider --model gemini/gemini-2.0-flash --architect --yes --auto-commits --message "${{ github.event.issue.title }}: ${{ github.event.issue.body }}. NOTE: The codebase is in project/src/. Put views in project/src/views/ and components in project/src/components/."
 
       - name: Push Changes to Repository
         run: |
