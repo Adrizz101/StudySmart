@@ -34,16 +34,21 @@ jobs:
           git config --global user.name "StudySmart AI Bot"
           git config --global user.email "ai-bot@users.noreply.github.com"
           
-          # Navigate into project folder
           cd project
           
-          # Run Aider with updated Gemini Flash alias
-          aider --model gemini/gemini-2.5-flash --architect --yes --auto-commits --message "${{ github.event.issue.title }}: ${{ github.event.issue.body }}. NOTE: The codebase is in project/src/. Put views in project/src/views/ and components in project/src/components/."
+          # Pass explicit target files to Aider so it creates them directly
+          aider --model gemini/gemini-2.5-flash --yes --auto-commits \
+            src/App.tsx \
+            src/views/StudioDeck.tsx \
+            src/views/Whiteboard.tsx \
+            src/views/ExamArena.tsx \
+            src/views/Privacy.tsx \
+            --message "${{ github.event.issue.title }}: ${{ github.event.issue.body }}. Create the files src/views/StudioDeck.tsx, src/views/Whiteboard.tsx, src/views/ExamArena.tsx, and src/views/Privacy.tsx with full React Tailwind code. Then import and add routes for all 4 in src/App.tsx."
 
       - name: Push Changes
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "feat: auto-generated StudySmart core modules [skip ci]" || echo "No changes to commit"
+          git commit -m "feat: add StudySmart views and updated App routing [skip ci]" || echo "No changes to commit"
           git push origin main
